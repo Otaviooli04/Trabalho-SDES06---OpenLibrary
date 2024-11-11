@@ -1,0 +1,135 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model autor {
+  autor_key     String        @id @db.VarChar(11)
+  nome          String?       @db.VarChar(255)
+  foto_url      String?       @db.VarChar(255)
+  qtd_trabalhos Int?
+  usuario_id    Int?
+  usuario       usuario?      @relation(fields: [usuario_id], references: [usuario_id], onDelete: NoAction, onUpdate: NoAction)
+  livro_autor   livro_autor[]
+
+  @@index([qtd_trabalhos], map: "autor_qtd_trabalhos")
+}
+
+model categoria {
+  categoria_id    Int               @id @default(autoincrement())
+  nome            String?           @unique @db.VarChar(255)
+  usuario_id      Int?
+  usuario         usuario?          @relation(fields: [usuario_id], references: [usuario_id], onDelete: NoAction, onUpdate: NoAction)
+  livro_categoria livro_categoria[]
+}
+
+model editora {
+  editora_id Int      @id @default(autoincrement())
+  nome       String?  @unique @db.VarChar(255)
+  usuario_id Int?
+  usuario    usuario? @relation(fields: [usuario_id], references: [usuario_id], onDelete: NoAction, onUpdate: NoAction)
+  livro      livro[]
+}
+
+model lingua {
+  lingua_id Int     @id @default(autoincrement())
+  sigla     String? @unique @db.VarChar(3)
+  livro     livro[]
+}
+
+model livro {
+  livro_key          String               @id @db.VarChar(11)
+  titulo             String?              @db.VarChar(255)
+  subtitulo          String?              @db.VarChar(255)
+  ano_publicacao     Int?
+  qtd_paginas        Int?
+  qtd_avaliacoes     Int?
+  capa_url           String?              @db.VarChar(255)
+  editora_id         Int?
+  lingua_sigla       String?              @db.VarChar(5)
+  usuario_id         Int?
+  lista_livros_livro lista_livros_livro[]
+  editora            editora?             @relation(fields: [editora_id], references: [editora_id], onDelete: NoAction, onUpdate: NoAction)
+  lingua             lingua?              @relation(fields: [lingua_sigla], references: [sigla], onDelete: NoAction, onUpdate: NoAction)
+  usuario            usuario?             @relation(fields: [usuario_id], references: [usuario_id], onDelete: NoAction, onUpdate: NoAction)
+  livro_autor        livro_autor[]
+  livro_categoria    livro_categoria[]
+  review             review[]
+
+  @@index([ano_publicacao], map: "livro_ano")
+  @@index([editora_id], map: "livro_editora_id")
+}
+
+model livro_autor {
+  livro_key String @db.VarChar(11)
+  autor_key String @db.VarChar(11)
+  autor     autor  @relation(fields: [autor_key], references: [autor_key], onDelete: NoAction, onUpdate: NoAction)
+  livro     livro  @relation(fields: [livro_key], references: [livro_key], onDelete: NoAction, onUpdate: NoAction)
+
+  @@id([livro_key, autor_key])
+}
+
+model livro_categoria {
+  livro_key    String    @db.VarChar(11)
+  categoria_id Int
+  categoria    categoria @relation(fields: [categoria_id], references: [categoria_id], onDelete: NoAction, onUpdate: NoAction)
+  livro        livro     @relation(fields: [livro_key], references: [livro_key], onDelete: NoAction, onUpdate: NoAction)
+
+  @@id([livro_key, categoria_id])
+}
+
+model perfil {
+  perfil_id  Int     @id @default(autoincrement())
+  usuario_id Int
+  bio        String?
+  foto_url   String? @db.VarChar(255)
+  usuario    usuario @relation(fields: [usuario_id], references: [usuario_id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model usuario {
+  usuario_id   Int            @id @default(autoincrement())
+  nome         String         @db.VarChar(255)
+  email        String         @unique @db.VarChar(255)
+  senha        String         @db.VarChar(255)
+  data_criacao DateTime?      @default(now()) @db.Timestamp(6)
+  autor        autor[]
+  categoria    categoria[]
+  editora      editora[]
+  lista_livros lista_livros[]
+  livro        livro[]
+  perfil       perfil[]
+  review       review[]
+}
+
+model lista_livros {
+  lista_id           Int                  @id @default(autoincrement())
+  usuario_id         Int
+  nome_lista         String?              @db.VarChar(255)
+  data_criacao       DateTime?            @default(now()) @db.Timestamp(6)
+  usuario            usuario              @relation(fields: [usuario_id], references: [usuario_id], onDelete: NoAction, onUpdate: NoAction)
+  lista_livros_livro lista_livros_livro[]
+}
+
+model lista_livros_livro {
+  lista_id     Int
+  livro_key    String       @db.VarChar(11)
+  lista_livros lista_livros @relation(fields: [lista_id], references: [lista_id], onDelete: NoAction, onUpdate: NoAction)
+  livro        livro        @relation(fields: [livro_key], references: [livro_key], onDelete: NoAction, onUpdate: NoAction)
+
+  @@id([lista_id, livro_key])
+}
+
+model review {
+  review_id    Int       @id @default(autoincrement())
+  usuario_id   Int
+  livro_key    String    @db.VarChar(11)
+  texto        String?
+  nota         Int?
+  data_criacao DateTime? @default(now()) @db.Timestamp(6)
+  livro        livro     @relation(fields: [livro_key], references: [livro_key], onDelete: NoAction, onUpdate: NoAction)
+  usuario      usuario   @relation(fields: [usuario_id], references: [usuario_id], onDelete: NoAction, onUpdate: NoAction)
+}
