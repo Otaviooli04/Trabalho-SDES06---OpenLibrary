@@ -1,5 +1,5 @@
 "use client";
-import { ColorSchemesSwitcher } from "../components/color-schemes-switcher";
+import { ColorSchemesSwitcher } from "./components/color-schemes-switcher";
 import AuthenticationTitle from "./login/page";
 import {
   AppShell,

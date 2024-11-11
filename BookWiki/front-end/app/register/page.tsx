@@ -17,7 +17,7 @@ import {
   useMantineColorScheme,
 } from "@mantine/core";
 import Link from "next/link";
-import { ColorSchemesSwitcher } from "../../components/color-schemes-switcher";
+import { ColorSchemesSwitcher } from "../components/color-schemes-switcher";
 import Image from "next/image";
 import { toast } from "react-toastify";
 

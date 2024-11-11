@@ -24,8 +24,18 @@ router.post("/login", async (req, res) => {
     return res.status(401).json({ error: "Senha incorreta." });
   }
 
-  const token = jwt.sign({ id: usuario.usuario_id }, SECRET, { expiresIn: "1h" });
-  res.json({ token });
+  // Verificação do tipo de usuário
+  const isAdmin = usuario.tipo === 'admin';
+
+  // Inclua o tipo de usuário no payload do token
+  const token = jwt.sign(
+    { id: usuario.usuario_id, tipo: usuario.tipo },
+    SECRET,
+    { expiresIn: "1h" }
+  );
+
+  // Inclua o tipo de usuário na resposta JSON
+  res.json({ token, isAdmin, tipo: usuario.tipo });
 });
 
 module.exports = router;

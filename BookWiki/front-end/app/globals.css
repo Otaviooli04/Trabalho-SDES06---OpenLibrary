@@ -7,3 +7,15 @@
 
 /* import mantine */
 @import "@mantine/core/styles.layer.css";
+
+@font-face {
+    font-family: 'MinhaFonte';
+    src: url('../public/fonts/GeistVF.woff') format('woff2'),
+         url('../public/fonts/GeistMonoVF.woff') format('woff');
+    font-weight: normal;
+    font-style: normal;
+  }
+
+body {
+    font-family: 'MinhaFonte', sans-serif;
+  }

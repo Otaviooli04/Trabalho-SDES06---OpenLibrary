@@ -1,10 +1,23 @@
 const express = require("express");
+const bodyParser = require("body-parser");
 const cors = require("cors");
-
+const fs = require("fs");
+const path = require("path");
 const app = express();
 
+// Middleware
 app.use(cors());
-app.use(express.json());
+app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ extended: true }));
+
+// Verifique e crie o diretório uploads se não existir
+const uploadDir = path.join(__dirname, "uploads");
+if (!fs.existsSync(uploadDir)) {
+  fs.mkdirSync(uploadDir);
+}
+
+// Servir arquivos estáticos do diretório uploads
+app.use("/uploads", express.static(uploadDir));
 
 const registerRoute = require("./routes/register");
 const loginRoute = require("./routes/login");
