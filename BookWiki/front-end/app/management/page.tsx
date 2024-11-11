@@ -64,7 +64,7 @@ export default function RegisterPage() {
         return;
       }
 
-      const response = await axios.post("http://localhost:3001/livros", {
+      const response = await axios.post("http://localhost:3001/livros/registro", {
         livro_key: livro.key,
         titulo: livro.title,
         subtitulo: livro.subtitle,
@@ -78,6 +78,8 @@ export default function RegisterPage() {
           Authorization: `Bearer ${token}`,
         },
       });
+      console.log("Livro registrado com sucesso:", response.data);
+      
 
       setSuccess("Livro registrado com sucesso.");
       setError(null);

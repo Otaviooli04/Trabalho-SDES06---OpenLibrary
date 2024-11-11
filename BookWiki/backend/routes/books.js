@@ -55,8 +55,14 @@ router.get("/buscar-livros", async (req, res) => {
 });
 
 // Rota para registrar o livro selecionado no banco de dados
-router.post("/registra-livros",  async (req, res) => {
-  const { livro_key, titulo, subtitulo, ano_publicacao, qtd_paginas, capa_url, editora_nome, lingua_sigla } = req.body;
+// Rota para registrar o livro selecionado no banco de dados
+router.post("/livros/registro", async (req, res) => {
+  console.log('Registrando livro');
+  console.log('req.body', req.body);
+  let { livro_key, titulo, subtitulo, ano_publicacao, qtd_paginas, capa_url, editora_nome, lingua_sigla, usuario_id } = req.body;
+
+  // Filtrar o livro_key para pegar apenas o valor após a última barra
+  livro_key = livro_key.split('/').pop();
 
   try {
     // Verifique se a editora existe, caso contrário, adicione-a
@@ -93,7 +99,7 @@ router.post("/registra-livros",  async (req, res) => {
         capa_url,
         editora_id: editora.editora_id,
         lingua_sigla: lingua.sigla,
-        usuario_id: req.user.id,
+        usuario_id: usuario_id || null, // Defina como null se não fornecido
       },
     });
 
