@@ -19,7 +19,7 @@ import {
 } from "@mantine/core";
 import Link from "next/link";
 import { useRouter } from "next/navigation"; // Import useRouter from next/navigation
-import { ColorSchemesSwitcher } from "../../components/color-schemes-switcher";
+import { ColorSchemesSwitcher } from "../components/color-schemes-switcher";
 import Image from "next/image";
 
 export default function LoginPage() {

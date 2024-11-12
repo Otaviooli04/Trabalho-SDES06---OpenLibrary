@@ -222,3 +222,11 @@ ALTER TABLE IF EXISTS public.review
     REFERENCES public.usuario (usuario_id) MATCH SIMPLE
     ON UPDATE NO ACTION
     ON DELETE NO ACTION;
+
+ALTER TABLE public.usuario
+ADD COLUMN tipo character varying(50) NOT NULL DEFAULT 'cliente',
+ADD CONSTRAINT tipo_usuario_check CHECK (tipo IN ('admin', 'cliente'));
+
+
+ALTER TABLE public.usuario
+ALTER COLUMN tipo SET DEFAULT 'cliente';
