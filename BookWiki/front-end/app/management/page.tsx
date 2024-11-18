@@ -442,7 +442,7 @@ export default function AdminPage() {
             placeholder="Selecione o tipo de usuário"
             data={[
               { value: 'admin', label: 'Admin' },
-              { value: 'user', label: 'User' },
+              { value: 'cliente', label: 'Cliente' },
             ]}
             value={newUserType}
             onChange={(value) => setNewUserType(value)}

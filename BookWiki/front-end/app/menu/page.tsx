@@ -60,27 +60,30 @@ export default function RegisterPage() {
   const [visibleComentarios, setVisibleComentarios] = useState<{ [key: number]: boolean }>({});
   const { colorScheme } = useMantineColorScheme();
 
-  useEffect(() => {
-    const fetchReviews = async () => {
-      try {
-        const token = localStorage.getItem("token");
-        if (!token) {
-          setError("Token não encontrado.");
-          return;
-        }
-
-        const response = await axios.get("http://localhost:3001/reviews/all", {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
-
-        setReviews(response.data);
-      } catch (error) {
-        setError("Erro ao buscar reviews.");
+  const fetchReviews = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        setError("Token não encontrado.");
+        return;
       }
-    };
 
+      const response = await axios.get("http://localhost:3001/reviews/all", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      // Ordenar reviews do mais novo para o mais velho
+      const sortedReviews = response.data.sort((a: Review, b: Review) => new Date(b.data_criacao).getTime() - new Date(a.data_criacao).getTime());
+
+      setReviews(sortedReviews);
+    } catch (error) {
+      setError("Erro ao buscar reviews.");
+    }
+  };
+
+  useEffect(() => {
     fetchReviews();
   }, []);
 
@@ -145,8 +148,6 @@ export default function RegisterPage() {
         livro_key: selectedLivro,
       };
 
-      
-
       await axios.post("http://localhost:3001/reviews", reviewData, {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -156,14 +157,8 @@ export default function RegisterPage() {
       setNewReview("");
       setSelectedLivro(null);
       setNota(null);
-      const response = await axios.get("http://localhost:3001/reviews/all", {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-      setReviews(response.data);
-      
-      
+      setLivros([]); // Limpar a lista de livros
+      fetchReviews(); // Recarregar reviews após enviar
     } catch (error) {
       if (axios.isAxiosError(error)) {
         console.log(error);
