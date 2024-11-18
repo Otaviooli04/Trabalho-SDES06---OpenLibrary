@@ -34,9 +34,6 @@ export function UserButton() {
             Authorization: `Bearer ${token}`,
           },
         });
-
-        console.log("Resposta do backend:", response.data); // Log da resposta do backend
-        console.log("Tipo de usuário:", response.data.tipo); // Log do tipo de usuário
         setUser(response.data);
       } catch (error) {
         setError("Erro ao buscar informações do usuário.");
@@ -62,7 +59,7 @@ export function UserButton() {
   const profileImageUrl = user.perfil && user.perfil.length > 0 ? user.perfil[0].foto_url : '';
 
   return (
-    <Menu shadow="md" width={200} position="right-start" offset={10}>
+    <Menu shadow="md" width={200} position="right-start" offset={15}>
       <Menu.Target>
         <UnstyledButton className={classes.user}>
           <Group>
