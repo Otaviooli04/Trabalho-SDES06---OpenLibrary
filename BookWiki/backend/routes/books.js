@@ -54,8 +54,7 @@ router.get("/buscar-livros", async (req, res) => {
   }
 });
 
-// Rota para registrar o livro selecionado no banco de dados
-// Rota para registrar o livro selecionado no banco de dados
+
 router.post("/livros/registro", async (req, res) => {
   console.log('Registrando livro');
   console.log('req.body', req.body);
@@ -63,6 +62,11 @@ router.post("/livros/registro", async (req, res) => {
 
   // Filtrar o livro_key para pegar apenas o valor após a última barra
   livro_key = livro_key.split('/').pop();
+
+  const livroExistente = await prisma.livro.findUnique({ where: { livro_key } });
+    if (livroExistente) {
+      return res.status(400).json({ error: "Livro já registrado." });
+    }
 
   try {
     // Verifique se a editora existe, caso contrário, adicione-a

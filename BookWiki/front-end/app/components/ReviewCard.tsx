@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import { Card, Text, Group, Avatar, Modal, Button } from "@mantine/core";
+import { Card, Text, Group, Avatar, Modal, Button, Textarea } from "@mantine/core";
 import Image from "next/image";
 
 interface Review {
@@ -26,8 +26,16 @@ interface ReviewCardProps {
 
 export function ReviewCard({ review }: ReviewCardProps) {
   const [opened, setOpened] = useState(false);
+  const [commentOpen, setCommentOpen] = useState(false);
+  const [comment, setComment] = useState("");
 
   const profileImageUrl = review.usuario.perfil[0]?.foto_url;
+
+  const handleCommentSubmit = () => {
+    // Lógica para enviar o comentário
+    setComment("");
+    setCommentOpen(false);
+  };
 
   return (
     <>

@@ -230,3 +230,13 @@ ADD CONSTRAINT tipo_usuario_check CHECK (tipo IN ('admin', 'cliente'));
 
 ALTER TABLE public.usuario
 ALTER COLUMN tipo SET DEFAULT 'cliente';
+
+CREATE TABLE comentario (
+    comentario_id SERIAL PRIMARY KEY,
+    texto TEXT NOT NULL,
+    data_criacao TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    usuario_id INT NOT NULL,
+    review_id INT NOT NULL,
+    FOREIGN KEY (usuario_id) REFERENCES "usuario"(usuario_id),
+    FOREIGN KEY (review_id) REFERENCES "review"(review_id)
+);

@@ -13,6 +13,16 @@ const nextConfig = {
       },
     ],
   },
+  webpack: (config, { isServer }) => {
+    if (!isServer) {
+      config.optimization.splitChunks = {
+        cacheGroups: {
+          default: false,
+        },
+      };
+    }
+    return config;
+  },
 };
 
 export default nextConfig;
