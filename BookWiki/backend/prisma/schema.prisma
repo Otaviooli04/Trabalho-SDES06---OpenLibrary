@@ -99,6 +99,7 @@ model usuario {
   tipo         String         @default("cliente") @db.VarChar(50)
   autor        autor[]
   categoria    categoria[]
+  comentario   comentario[]
   editora      editora[]
   lista_livros lista_livros[]
   livro        livro[]
@@ -125,12 +126,23 @@ model lista_livros_livro {
 }
 
 model review {
-  review_id    Int       @id @default(autoincrement())
+  review_id    Int          @id @default(autoincrement())
   usuario_id   Int
-  livro_key    String    @db.VarChar(11)
+  livro_key    String       @db.VarChar(11)
   texto        String?
   nota         Int?
-  data_criacao DateTime? @default(now()) @db.Timestamp(6)
-  livro        livro     @relation(fields: [livro_key], references: [livro_key], onDelete: NoAction, onUpdate: NoAction)
-  usuario      usuario   @relation(fields: [usuario_id], references: [usuario_id], onDelete: NoAction, onUpdate: NoAction)
+  data_criacao DateTime?    @default(now()) @db.Timestamp(6)
+  comentario   comentario[]
+  livro        livro        @relation(fields: [livro_key], references: [livro_key], onDelete: NoAction, onUpdate: NoAction)
+  usuario      usuario      @relation(fields: [usuario_id], references: [usuario_id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model comentario {
+  comentario_id Int      @id @default(autoincrement())
+  texto         String
+  data_criacao  DateTime @default(now()) @db.Timestamp(6)
+  usuario_id    Int
+  review_id     Int
+  review        review   @relation(fields: [review_id], references: [review_id], onDelete: NoAction, onUpdate: NoAction)
+  usuario       usuario  @relation(fields: [usuario_id], references: [usuario_id], onDelete: NoAction, onUpdate: NoAction)
 }

@@ -13,7 +13,7 @@ interface User {
   perfil: {
     foto_url: string;
     bio: string;
-    perfil_id: number; 
+    perfil_id: number;
   }[];
 }
 
@@ -68,7 +68,7 @@ export default function ProfilePage() {
           },
         });
   
-        console.log("Resposta do backend:", response.data); // Log da resposta do backend
+        
         setUser(response.data);
         setNewBio(response.data.perfil[0].bio);
       } catch (error) {
@@ -122,7 +122,7 @@ export default function ProfilePage() {
   }, []);
 
   const handleBioSave = async () => {
-    console.log("Salvando bio...");
+    
     try {
       const token = localStorage.getItem("token");
       if (!token) {
@@ -134,25 +134,22 @@ export default function ProfilePage() {
         setError("Informações do perfil não encontradas.");
         return;
       }
-      console.log("Perfil ID:", user.perfil[0].perfil_id);
+      
       const formData = new FormData();
       formData.append("perfil_id", user.perfil[0].perfil_id.toString());
-      console.log("New bio:", newBio);
       
 
+
       if (newBio !== user.perfil[0].bio) {
-        console.log("Adicionando bio ao formData...");
+        
         formData.append("bio", newBio);
       }
 
       if (newPhoto) {
-        console.log("Adicionando foto ao formData...");
+        
         formData.append("foto", newPhoto);
       }
-      console.log("Enviando formData:", formData);
-      console.log("dados do formdata", formData.get("perfil_id"));
-      console.log("dados do formdata", formData.get("bio"));
-      console.log("dados do formdata", formData.get("foto"));
+      
       const response = await axios.put("http://localhost:3001/profile/update", formData, {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -161,7 +158,7 @@ export default function ProfilePage() {
       });
 
       setUser(response.data);
-      console.log("Resposta do backend:", response.data);
+      
       setIsEditingBio(false);
     } catch (error) {
       setError("Erro ao atualizar o perfil.");

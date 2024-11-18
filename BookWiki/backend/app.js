@@ -24,6 +24,7 @@ const loginRoute = require("./routes/login");
 const profileRoute = require("./routes/profile");
 const reviewsRoute = require("./routes/reviews");
 const booksRoute = require("./routes/books");
+const usersRoute = require("./routes/user");
 
 
 app.use(registerRoute);
@@ -31,6 +32,7 @@ app.use(loginRoute);
 app.use(profileRoute);
 app.use(reviewsRoute);
 app.use(booksRoute);
+app.use(usersRoute);
 
 
 
