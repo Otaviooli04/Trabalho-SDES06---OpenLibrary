@@ -41,7 +41,9 @@ export default function LoginPage() {
         senha: password,
       });
       const { token } = response.data;
+      const { usuario_id } = response.data;
       localStorage.setItem("token", token);
+      localStorage.setItem("usuario_id", usuario_id);
       router.push("/menu"); // Redirect to the menu page
     } catch (error) {
       setError("Email ou senha incorretos.");

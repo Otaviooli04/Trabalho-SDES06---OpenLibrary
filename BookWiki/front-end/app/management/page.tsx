@@ -57,6 +57,18 @@ interface Livro {
   cover_i?: number;
   publisher: string[];
   language: string[];
+  author_key: string;
+  author_name: string;
+}
+
+interface Autor {
+  key: string;
+  name: string;
+  work_count: string;
+  birth_date: string;
+  death_date: string;
+  top_work: string;
+  top_subjects: string;
 }
 
 interface ThProps {
@@ -116,8 +128,11 @@ function sortData(
 export default function AdminPage() {
   const [users, setUsers] = useState<User[]>([]);
   const [nomeLivro, setNomeLivro] = useState("");
+  const [nomeAutor, setNomeAutor] = useState("");
   const [livros, setLivros] = useState<Livro[]>([]);
+  const [autores, setAutores] = useState<Autor[]>([]);
   const [selectedLivro, setSelectedLivro] = useState<string | null>(null);
+  const [selectedAutor, setSelectedAutor] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [isLivroModalOpen, setIsLivroModalOpen] = useState(false);
@@ -238,12 +253,13 @@ export default function AdminPage() {
         capa_url: livro.cover_i ? `https://covers.openlibrary.org/b/id/${livro.cover_i}-L.jpg` : null,
         editora_nome: livro.publisher[0],
         lingua_sigla: livro.language[0],
+        author_key: livro.author_key,
+        author_name: livro.author_name,
       }, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
       });
-      
 
       setSuccess("Livro registrado com sucesso.");
       setError(null);
@@ -251,6 +267,66 @@ export default function AdminPage() {
     } catch (error) {
       setError("Erro ao registrar livro.");
       console.error("Erro ao registrar livro:", error);
+    }
+  };
+
+
+  const fetchAutores = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        setError("Token não encontrado.");
+        return;
+      }
+
+      const response = await axios.get(`http://localhost:3001/buscar-autores?nomeAutor=${nomeAutor}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      setAutores(response.data);
+      setError(null);
+    } catch (error) {
+      setError("Erro ao buscar autores.");
+      console.error("Erro ao buscar autores:", error);
+    }
+  };
+
+  const registerAutor = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        setError("Token não encontrado.");
+        return;
+      }
+
+      const autor = autores.find(l => l.key === selectedAutor);
+      if (!autor) {
+        setError("Autor não encontrado.");
+        return;
+      }
+
+      const response = await axios.post("http://localhost:3001/autores/registro", {
+        author_key: autor.key,
+        author_name: autor.name,
+        author_work_count: autor.work_count,
+        author_birth_date: autor.birth_date,
+        author_death_date: autor.death_date,
+        author_top_work: autor.top_work,
+        author_top_subjects: autor.top_subjects,
+      }, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      setSuccess("Autor registrado com sucesso.");
+      setError(null);
+      setIsLivroModalOpen(false);
+    } catch (error) {
+      setError("Erro ao registrar autor.");
+      console.error("Erro ao registrar autor:", error);
     }
   };
 
@@ -423,12 +499,31 @@ export default function AdminPage() {
         </Stack>
       </Modal>
 
+
       <Modal opened={isEditoraModalOpen} onClose={() => setIsEditoraModalOpen(false)} title="Adicionar Editora">
         {/* Conteúdo do modal de adicionar editora */}
       </Modal>
 
       <Modal opened={isAutorModalOpen} onClose={() => setIsAutorModalOpen(false)} title="Adicionar Autor">
-        {/* Conteúdo do modal de adicionar autor */}
+      <Stack>
+          <input
+            type="text"
+            value={nomeAutor}
+            onChange={(e) => setNomeAutor(e.target.value)}
+            placeholder="Digite o nome do autor"
+          />
+          <Button variant="outline" color={buttonColor} onClick={fetchAutores}>Buscar Autores</Button>
+          {autores.length > 0 && (
+            <Select
+              label="Selecione um autor"
+              placeholder="Escolha um autor"
+              data={autores.map(autor => ({ value: autor.key, label: autor.name }))}
+              value={selectedAutor}
+              onChange={(value) => setSelectedAutor(value)}
+            />
+          )}
+          {selectedAutor && <Button variant="outline" color={buttonColor} onClick={registerAutor}>Registrar Autor</Button>}
+        </Stack>
       </Modal>
 
       <Modal opened={isVisualizarLivrosModalOpen} onClose={() => setIsVisualizarLivrosModalOpen(false)} title="Visualizar Livros">
