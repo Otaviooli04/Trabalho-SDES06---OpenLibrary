@@ -35,7 +35,7 @@ router.post("/login", async (req, res) => {
   );
 
   // Inclua o tipo de usuário na resposta JSON
-  res.json({ token, isAdmin, tipo: usuario.tipo });
+  res.json({ token, isAdmin, tipo: usuario.tipo, usuario_id: usuario.usuario_id });
 });
 
 module.exports = router;

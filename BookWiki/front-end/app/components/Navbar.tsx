@@ -4,14 +4,19 @@ import Image from 'next/image';
 import { UserButton } from './UserButton';
 import { LinksGroup } from './NavBarLinksGroup';
 import classes from './NavbarNested.module.css';
+import Link from 'next/link';
 
 const mockdata = [
-  { label: 'Adicionar Review', icon: 'plus' },
-  { label: 'Buscar Livros   ', icon: 'search' },
+  { label: 'Adicionar Review', icon: 'plus', href: '/add-review' },
+  { label: 'Buscar Livros', icon: 'search', href: '/searchBooks' },
 ];
 
 export default function NavbarNested() {
-  const links = mockdata.map((item) => <LinksGroup {...item} key={item.label} />);
+  const links = mockdata.map((item) => (
+    <Link href={item.href} key={item.label} className={classes.link}>
+      <LinksGroup {...item} />
+    </Link>
+  ));
   const { colorScheme } = useMantineColorScheme();
   const isDark = colorScheme === "dark";
   const logoSrc = isDark ? "/logo-dark.svg" : "/logo-light.svg";

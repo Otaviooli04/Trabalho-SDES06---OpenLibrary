@@ -15,7 +15,7 @@ router.get("/livros", async (req, res) => {
     });
 
     res.json(livros);
-    console.log("Livros encontrados:", livros); // Log dos livros encontrados
+    ("Livros encontrados:", livros); // Log dos livros encontradosconsole.log
   } catch (error) {
     console.error("Erro ao buscar livros:", error); // Log do erro
     console.log("Erro ao buscar livros.");
@@ -26,7 +26,7 @@ router.get("/livros", async (req, res) => {
 
 // Rota para buscar a lista de livros na API do OpenLibrary
 router.get("/buscar-livros", async (req, res) => {
-  console.log('Buscando livro')
+  console.log('Buscando livro');
   const { nomeLivro } = req.query;
 
   if (!nomeLivro) {
@@ -35,8 +35,10 @@ router.get("/buscar-livros", async (req, res) => {
 
   try {
     const response = await axios.get(`https://openlibrary.org/search.json?title=${nomeLivro}`);
-    const livros = response.data.docs.slice(0, 1).map((livro) => ({
+    const livros = response.data.docs.slice(0, 3).map((livro) => ({
       key: livro.key,
+      author_name: livro.author_name,
+      author_key: livro.author_key,
       title: livro.title,
       subtitle: livro.subtitle,
       first_publish_year: livro.first_publish_year,
@@ -45,8 +47,8 @@ router.get("/buscar-livros", async (req, res) => {
       publisher: livro.publisher,
       language: livro.language,
     }));
-    console.log(`Livros encontrados: ${livros.length}`)
-    console.log('livros', livros)
+    console.log(`Livros encontrados: ${livros.length}`);
+    console.log('livros', livros);
     res.json(livros);
   } catch (error) {
     console.error("Erro ao buscar livros na API do OpenLibrary:", error);
@@ -54,19 +56,24 @@ router.get("/buscar-livros", async (req, res) => {
   }
 });
 
-
 router.post("/livros/registro", async (req, res) => {
   console.log('Registrando livro');
   console.log('req.body', req.body);
-  let { livro_key, titulo, subtitulo, ano_publicacao, qtd_paginas, capa_url, editora_nome, lingua_sigla, usuario_id } = req.body;
+  let { livro_key, titulo, subtitulo, ano_publicacao, qtd_paginas, capa_url, editora_nome, lingua_sigla, usuario_id, author_key, author_name, autor_key } = req.body;
 
   // Filtrar o livro_key para pegar apenas o valor após a última barra
   livro_key = livro_key.split('/').pop();
+  author_key = String(author_key).replace(/[\[\]]/g, '');
+  author_name = String(author_name).replace(/[\[\]]/g, '');
+  nome = author_name;
+  console.log('author_name', author_name);
+  console.log('name', nome);
+
 
   const livroExistente = await prisma.livro.findUnique({ where: { livro_key } });
-    if (livroExistente) {
-      return res.status(400).json({ error: "Livro já registrado." });
-    }
+  if (livroExistente) {
+    return res.status(400).json({ error: "Livro já registrado." });
+  }
 
   try {
     // Verifique se a editora existe, caso contrário, adicione-a
@@ -90,7 +97,37 @@ router.post("/livros/registro", async (req, res) => {
         },
       });
     }
+    autor_key = author_key;
 
+    // Verifique se o autor existe, caso contrário, adicione-o
+    let autor;
+    if (author_key) {
+      autor = await prisma.autor.findUnique({ where: { autor_key } });
+      if (autor) {
+        // Atualizar a quantidade de trabalhos do autor existente
+        
+        autor = await prisma.autor.update({
+          where: { autor_key },
+          data: {
+            qtd_trabalhos: autor.qtd_trabalhos + 1,
+          },
+        });
+      } else {
+        // Construir a URL da foto
+        const foto_url = `https://covers.openlibrary.org/a/olid/${autor_key}-L.jpg`;
+
+        autor = await prisma.autor.create({
+          data: {
+            autor_key,
+            nome,
+            foto_url,
+            qtd_trabalhos: 1, // Inicialmente um trabalho
+            usuario_id: null, // Defina como null se não fornecido
+          },
+        });
+        console.log('autor', autor);
+      }
+    }
     // Crie o livro
     const livro = await prisma.livro.create({
       data: {
@@ -107,11 +144,88 @@ router.post("/livros/registro", async (req, res) => {
       },
     });
 
+    // Associe o autor ao livro, se o autor_key foi fornecido
+    if (autor_key) {
+      await prisma.livro_autor.create({
+        data: {
+          livro_key: livro.livro_key,
+          autor_key: autor.autor_key,
+        },
+      });
+    }
+
     res.status(201).json(livro);
     console.log("Livro criado:", livro); // Log do livro criado
   } catch (error) {
     console.error("Erro ao criar livro:", error); // Log do erro
     res.status(500).json({ error: "Erro ao criar livro." });
+  }
+});
+
+router.get("/buscar-autores", async (req, res) => {
+  console.log('Buscando autor');
+  const { nomeAutor } = req.query;
+
+  if (!nomeAutor) {
+    return res.status(400).json({ error: "Nome do autor é obrigatório." });
+  }
+
+  try {
+    const response = await axios.get(`https://openlibrary.org/search/authors.json?q=${nomeAutor}`);
+    const autores = response.data.docs.slice(0, 3).map((autor) => ({
+      key: autor.key,
+      name: autor.name,
+      work_count: autor.work_count,
+      birth_date: autor.irth_date,
+      death_date: autor.death_date,
+      top_work: autor.top_work,
+      top_subjects: autor.top_subjects,
+    }));
+    console.log(`Autores encontrados: ${autores.length}`);
+    console.log('autores', autores);
+    res.json(autores);
+  } catch (error) {
+    console.error("Erro ao buscar autores na API do OpenLibrary:", error);
+    res.status(500).json({ error: "Erro ao buscar autores na API do OpenLibrary." });
+  }
+});
+
+// Rota para adicionar um autor
+router.post("/autores/registro", async (req, res) => {
+  console.log('Adicionando autor');
+  console.log('req.body', req.body);
+  const { author_key, author_name, author_work_count, author_death_date, author_top_work, author_top_subjects } = req.body;
+
+  if (!author_key || !author_name) {
+    return res.status(400).json({ error: "Chave e nome do autor são obrigatórios." });
+  }
+
+  try {
+    // Verificar se o autor já existe no banco de dados
+    const autorExistente = await prisma.autor.findUnique({ where: { autor_key: author_key } });
+    if (autorExistente) {
+      return res.status(400).json({ error: "Autor já registrado." });
+    }
+
+    // Construir a URL da foto
+    const foto_url = `https://covers.openlibrary.org/a/olid/${author_key}-L.jpg`;
+
+    // Adicionar o autor ao banco de dados
+    const novoAutor = await prisma.autor.create({
+      data: {
+        autor_key: author_key,
+        nome: author_name,
+        foto_url,
+        qtd_trabalhos: author_work_count,
+        usuario_id: null, // Defina como null se não fornecido
+      },
+    });
+
+    res.status(201).json(novoAutor);
+    console.log("Autor criado:", novoAutor); // Log do autor criado
+  } catch (error) {
+    console.error("Erro ao adicionar autor:", error); // Log do erro
+    res.status(500).json({ error: "Erro ao adicionar autor." });
   }
 });
 

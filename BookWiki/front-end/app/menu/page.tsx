@@ -1,7 +1,8 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
+import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import axios from "axios";
-import { Text, Stack, Box, Textarea, Button, Group, Select, NumberInput, Container, AppShell } from "@mantine/core";
+import { Text, Stack, Box, Textarea, Button, Group, Select, NumberInput, Container, AppShell, Modal } from "@mantine/core";
 import { ColorSchemesSwitcher } from "../components/color-schemes-switcher";
 import NavbarNested from "../components/Navbar";
 import { ReviewCard } from "../components/ReviewCard";
@@ -9,7 +10,7 @@ import { ComentarioCard } from "../components/ComentarioCard";
 import dynamic from "next/dynamic";
 import { debounce } from "lodash";
 import { useMantineColorScheme } from '@mantine/core';
-import { IconMessageCircle } from '@tabler/icons-react';
+import { IconMessageCircle, IconEdit, IconTrash } from '@tabler/icons-react';
 
 const DynamicContainer = dynamic(() => import('@mantine/core').then(mod => mod.Container), { ssr: false });
 const DynamicAppShell = dynamic(() => import('@mantine/core').then(mod => mod.AppShell), { ssr: false });
@@ -41,10 +42,26 @@ interface Comentario {
   texto: string;
   data_criacao: string;
   usuario: {
+    usuario_id: number;
     nome: string;
     perfil: {
       foto_url: string;
     }[];
+  };
+  review: {
+    review_id: number;
+  };
+}
+
+interface Usuario {
+  usuario_id: number;
+  nome: string;
+  email: string;
+  tipo: string;
+  perfil: {
+    perfil_id: number;
+    bio: string;
+    foto_url: string;
   };
 }
 
@@ -57,14 +74,46 @@ export default function RegisterPage() {
   const [selectedLivro, setSelectedLivro] = useState<string | null>(null);
   const [nota, setNota] = useState<number | null>(null);
   const [newComentario, setNewComentario] = useState<string>("");
-  const [visibleComentarios, setVisibleComentarios] = useState<{ [key: number]: boolean }>({});
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editReviewId, setEditReviewId] = useState<number | null>(null);
+  const [editReviewText, setEditReviewText] = useState<string>("");
+  const [editReviewNota, setEditReviewNota] = useState<number | null>(null);
+  const [usuario, setUsuario] = useState<Usuario | null>(null);
+  const [isEditComentarioModalOpen, setIsEditComentarioModalOpen] = useState(false);
   const { colorScheme } = useMantineColorScheme();
+  const [editComentarioText, setEditComentarioText] = useState<string>("");
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const [visibleComentarios, setVisibleComentarios] = useState<Record<number, boolean>>({});
+  const fetchUsuario = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        setError("Token não encontrado.");
+        router.push("/login"); // Redirecionar para a página de login
+        return;
+      }
+
+      const response = await axios.get("http://localhost:3001/profile", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      setUsuario(response.data);
+    } catch (error) {
+      setError("Erro ao buscar perfil do usuário.");
+      router.push("/login"); // Redirecionar para a página de login
+    }
+  };
 
   const fetchReviews = async () => {
     try {
       const token = localStorage.getItem("token");
       if (!token) {
         setError("Token não encontrado.");
+        router.push("/login"); // Redirecionar para a página de login
         return;
       }
 
@@ -80,10 +129,12 @@ export default function RegisterPage() {
       setReviews(sortedReviews);
     } catch (error) {
       setError("Erro ao buscar reviews.");
+      router.push("/login"); // Redirecionar para a página de login
     }
   };
 
   useEffect(() => {
+    fetchUsuario();
     fetchReviews();
   }, []);
 
@@ -106,13 +157,13 @@ export default function RegisterPage() {
         setError("Token não encontrado.");
         return;
       }
-
+  
       const response = await axios.get(`http://localhost:3001/comentarios/${review_id}`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
       });
-
+  
       setComentarios((prev) => ({
         ...prev,
         [review_id]: response.data,
@@ -123,6 +174,7 @@ export default function RegisterPage() {
     }
   };
 
+  
   const handleSearchChange = (query: string) => {
     if (query.length > 2) {
       fetchLivros(query);
@@ -215,11 +267,238 @@ export default function RegisterPage() {
       ...prev,
       [review_id]: !prev[review_id],
     }));
+  
     if (!visibleComentarios[review_id]) {
-      fetchComentarios(review_id);
+      fetchComentarios(review_id); // Supondo que `review_id` é number
+    }
+  };
+  const handleEditReview = (review: Review) => {
+    setEditReviewId(review.review_id);
+    setEditReviewText(review.texto);
+    setEditReviewNota(review.nota);
+    setIsEditModalOpen(true);
+  };
+
+  const handleDeleteReview = async (review_id: number) => {
+    try {
+      const token = localStorage.getItem("token");
+      const usuario_id = localStorage.getItem("usuario_id");
+      if (!token) {
+        setError("Token não encontrado.");
+        return;
+      }
+  
+      if (!usuario_id) {
+        setError("Usuário não encontrado.");
+        return;
+      }
+  
+      console.log("Enviando usuario_id:", usuario_id); // Adicione este console.log
+      console.log("Enviando review_id:", review_id); // Adicione este console.log
+  
+      await axios.delete(`http://localhost:3001/reviews/${review_id}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        data: {
+          usuario_id: usuario_id
+        }
+      });
+  
+      fetchReviews(); // Recarregar reviews após excluir
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        console.log(error);
+        console.log(error.response?.data);
+      } else {
+        console.log(error);
+      }
+      setError("Erro ao excluir review.");
+    }
+  };
+  
+  const handleUpdateReview = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      const usuario_id = localStorage.getItem("usuario_id");
+      console.log("Enviando usuario_id:", usuario_id); // Adicione este console.log
+      if (!token) {
+        setError("Token não encontrado.");
+        return;
+      }
+  
+      if (!editReviewId || !editReviewText || !editReviewNota) {
+        setError("Todos os campos são obrigatórios.");
+        return;
+      }
+  
+      const reviewData = {
+        texto: editReviewText,
+        nota: editReviewNota,
+        usuario_id: usuario_id
+      };
+  
+      await axios.put(`http://localhost:3001/reviews/${editReviewId}`, reviewData, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+  
+      setIsEditModalOpen(false);
+      setEditReviewId(null);
+      setEditReviewText("");
+      setEditReviewNota(null);
+      fetchReviews(); // Recarregar reviews após atualizar
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        console.log(error);
+        console.log(error.response?.data);
+      } else {
+        console.log(error);
+      }
+      setError("Erro ao atualizar review.");
     }
   };
 
+  const handleEditIcon = (review: Review) => {
+    console.log("usuario_id:", review.usuario.usuario_id);
+    console.log("localStorage.usuario_id:", localStorage.getItem("usuario_id"));
+    const usuario_id = localStorage.getItem("usuario_id");
+    return usuario_id && usuario_id === review.usuario.usuario_id.toString();
+  };
+
+  const handleTrashIcon = (review: Review) => {
+    const usuario_id = localStorage.getItem("usuario_id");
+    if (!usuario_id) {
+      return false;
+    }
+    if (usuario_id === review.usuario.usuario_id.toString()) {
+      return true;
+    }
+    if (usuario && usuario.tipo === "admin") {
+      return true;
+    }
+    return usuario_id && usuario_id === review.usuario.usuario_id.toString();
+  };
+
+  const [editComentarioId, setEditComentarioId] = useState<number | null>(null);
+
+  const handleUpdateComentario = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      const usuario_id = localStorage.getItem("usuario_id");
+      if (!token) {
+        setError("Token não encontrado.");
+        return;
+      }
+  
+      if (!editComentarioId || !editComentarioText) {
+        setError("Todos os campos são obrigatórios.");
+        return;
+      }
+      setComentarios((prev) => {
+        const updatedComentarios = { ...prev };
+        const reviewId = Object.keys(updatedComentarios).find((key) =>
+          updatedComentarios[Number(key)].some((comentario) => comentario.comentario_id === editComentarioId)
+        );
+  
+        if (reviewId) {
+          const reviewIdNumber = Number(reviewId);
+          updatedComentarios[reviewIdNumber] = updatedComentarios[reviewIdNumber].map((comentario) =>
+            comentario.comentario_id === editComentarioId
+              ? { ...comentario, texto: editComentarioText }
+              : comentario
+          );
+        }
+  
+        return updatedComentarios;
+      });
+      const comentarioData = {
+        texto: editComentarioText,
+        usuario_id: usuario_id
+      };
+  
+      await axios.put(`http://localhost:3001/comentarios/${editComentarioId}`, comentarioData, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+  
+      setIsEditComentarioModalOpen(false);
+      setEditComentarioId(null);
+      setEditComentarioText("");
+  
+      // Recarregar comentários da review correspondente
+      const comentario = comentarios[editComentarioId];
+      if (comentario) {
+        fetchComentarios(comentario[0].review.review_id);
+      }
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        console.log(error);
+        console.log(error.response?.data);
+      } else {
+        console.log(error);
+      }
+      setError("Erro ao atualizar comentário.");
+    }
+  };
+
+  const handleEditComentario = (comentario: Comentario) => {
+    setEditComentarioId(comentario.comentario_id);
+    setEditComentarioText(comentario.texto);
+    setIsEditComentarioModalOpen(true);
+  };
+
+  const handleDeleteComentario = async (comentario_id: number, review_id: number) => {
+    try {
+      const token = localStorage.getItem("token");
+  
+      if (!token) {
+        setError("Token não encontrado.");
+        return;
+      }
+  
+      await axios.delete(`http://localhost:3001/comentarios/${comentario_id}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+  
+      // Remover o comentário do estado local
+      setComentarios((prev) => {
+        const updatedComentarios = { ...prev };
+        updatedComentarios[review_id] = updatedComentarios[review_id].filter(
+          (comentario) => comentario.comentario_id !== comentario_id
+        );
+        return updatedComentarios;
+      });
+    } catch (error) {
+      console.error("Erro ao excluir comentário:", error);
+      setError("Erro ao excluir comentário.");
+    }
+  };
+
+  const handleEditComentarioIcon = (comentario: Comentario) => {
+    console.log("usuario_id:", comentario.usuario.usuario_id);
+    console.log("localStorage.usuario_id:", localStorage.getItem("usuario_id"));
+    const usuario_id = localStorage.getItem("usuario_id");
+    return usuario_id && usuario_id === comentario.usuario.usuario_id.toString();
+  };
+
+  const handleTrashComentarioIcon = (comentario: Comentario) => {
+    const usuario_id = localStorage.getItem("usuario_id");
+    if (!usuario_id) {
+      return false;
+    }
+    if (usuario_id === comentario.usuario.usuario_id.toString()) {
+      return true;
+    }
+    if (usuario && usuario.tipo === "admin") {
+      return true;
+    }
+    return usuario_id && usuario_id === comentario.usuario.usuario_id.toString();
+  };
   const buttonColor = colorScheme === 'dark' ? 'white' : 'black';
   const buttonBgColor = colorScheme === 'dark' ? 'dark' : 'light';
 
@@ -264,29 +543,85 @@ export default function RegisterPage() {
             {reviews.map((review) => (
               <Box key={review.review_id}>
                 <ReviewCard review={review} />
-                <Button onClick={() => toggleComentarios(review.review_id)} variant="outline" color={buttonBgColor} style={{ color: buttonColor, border: 'none' }}>
-                  <IconMessageCircle size={16} style={{ marginRight: 8 }} />
-                </Button>
+                <Group>
+                  <Button onClick={() => toggleComentarios(review.review_id)} variant="outline" color={buttonBgColor} style={{ color: buttonColor, border: 'none' }}>
+                    <IconMessageCircle size={16} style={{ marginRight: 8 }} />
+                  </Button>
+                  {handleEditIcon(review) && (
+                    <Button onClick={() => handleEditReview(review)} variant="outline" color={buttonBgColor} style={{ color: buttonColor, border: 'none' }}>
+                      <IconEdit size={16} style={{ marginRight: 8 }} />
+                    </Button>
+                  )}
+                  {handleTrashIcon(review) && (
+                    <Button onClick={() => handleDeleteReview(review.review_id)} variant="outline" color={buttonBgColor} style={{ color: buttonColor, border: 'none' }}>
+                      <IconTrash size={16} style={{ marginRight: 8 }} />
+                    </Button>
+                  )}
+                </Group>
                 {visibleComentarios[review.review_id] && (
-                  <>
-                    {(Array.isArray(comentarios[review.review_id]) ? comentarios[review.review_id] : []).map((comentario) => (
-                      <ComentarioCard key={comentario.comentario_id} comentario={comentario} />
-                    ))}
-                    <Textarea
-                      value={newComentario}
-                      onChange={(event) => setNewComentario(event.currentTarget.value)}
-                      placeholder="Escreva seu comentário aqui..."
-                      minRows={3}
-                      style={{ flex: 1 }}
-                    />
-                    <Button onClick={() => handleComentarioSubmit(review.review_id)} variant="outline" color={buttonBgColor} style={{ color: buttonColor, border: 'none' }}>Enviar Comentário</Button>
-                  </>
+  <>
+            {(Array.isArray(comentarios[review.review_id]) ? comentarios[review.review_id] : []).map((comentario) => (
+              <Box key={comentario.comentario_id}>
+                <ComentarioCard comentario={comentario} />
+                <Group>
+                {handleEditComentarioIcon(comentario) && (
+                  <Button onClick={() => handleEditComentario(comentario)} variant="outline" color={buttonBgColor} style={{ color: buttonColor, border: 'none' }}>
+                    <IconEdit size={16} style={{ marginRight: 8 }} />
+                  </Button>
                 )}
+                  {handleTrashComentarioIcon(comentario) && (
+                    <Button onClick={() => handleDeleteComentario(comentario.comentario_id, review.review_id)} variant="outline" color={buttonBgColor} style={{ color: buttonColor, border: 'none' }}>
+                      <IconTrash size={16} style={{ marginRight: 8 }} />
+                    </Button>
+                  )}
+                </Group>
+              </Box>
+            ))}
+            <Textarea
+              value={newComentario}
+              onChange={(event) => setNewComentario(event.currentTarget.value)}
+              placeholder="Escreva seu comentário aqui..."
+              minRows={3}
+              style={{ flex: 1 }}
+            />
+            <Button onClick={() => handleComentarioSubmit(review.review_id)} variant="outline" color={buttonBgColor} style={{ color: buttonColor, border: 'none' }}>Enviar Comentário</Button>
+          </>
+        )}
               </Box>
             ))}
           </Stack>
         </Box>
       </DynamicContainer>
+
+      <Modal opened={isEditModalOpen} onClose={() => setIsEditModalOpen(false)} title="Editar Review">
+        <Stack>
+          <Textarea
+            value={editReviewText}
+            onChange={(event) => setEditReviewText(event.currentTarget.value)}
+            placeholder="Edite sua review aqui..."
+            minRows={6}
+          />
+          <NumberInput
+            value={editReviewNota ?? undefined}
+            onChange={(value) => setEditReviewNota(value as number)}
+            placeholder="Nota"
+            min={0}
+            max={5}
+          />
+          <Button onClick={handleUpdateReview} variant="outline" color={buttonBgColor} style={{ color: buttonColor, border: 'none' }}>Salvar</Button>
+        </Stack>
+      </Modal>
+      <Modal opened={isEditComentarioModalOpen} onClose={() => setIsEditComentarioModalOpen(false)} title="Editar Comentário">
+      <Stack>
+    <Textarea
+      value={editComentarioText}
+      onChange={(event) => setEditComentarioText(event.currentTarget.value)}
+      placeholder="Edite seu comentário aqui..."
+      minRows={3}
+    />
+    <Button onClick={handleUpdateComentario} variant="outline" color={buttonBgColor} style={{ color: buttonColor, border: 'none' }}>Salvar</Button>
+  </Stack>
+</Modal>
     </DynamicAppShell>
   );
 }
