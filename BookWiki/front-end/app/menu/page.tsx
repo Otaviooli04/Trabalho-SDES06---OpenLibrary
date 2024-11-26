@@ -2,7 +2,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import axios from "axios";
-import { Text, Stack, Box, Textarea, Button, Group, Select, NumberInput, Container, AppShell, Modal } from "@mantine/core";
+import { Text, Stack, Box, Textarea, Button, Group, Select, NumberInput, Container, AppShell, Modal, Notification } from "@mantine/core";
 import { ColorSchemesSwitcher } from "../components/color-schemes-switcher";
 import NavbarNested from "../components/Navbar";
 import { ReviewCard } from "../components/ReviewCard";
@@ -10,7 +10,8 @@ import { ComentarioCard } from "../components/ComentarioCard";
 import dynamic from "next/dynamic";
 import { debounce } from "lodash";
 import { useMantineColorScheme } from '@mantine/core';
-import { IconMessageCircle, IconEdit, IconTrash } from '@tabler/icons-react';
+import  {IconCheck, IconX } from '@tabler/icons-react';
+import { notifications } from '@mantine/notifications';
 
 const DynamicContainer = dynamic(() => import('@mantine/core').then(mod => mod.Container), { ssr: false });
 const DynamicAppShell = dynamic(() => import('@mantine/core').then(mod => mod.AppShell), { ssr: false });
@@ -24,6 +25,7 @@ interface Review {
     usuario_id: number;
     nome: string;
     perfil: {
+      perfil_id: number;
       foto_url: string;
     }[];
   };
@@ -70,6 +72,7 @@ export default function RegisterPage() {
   const [livros, setLivros] = useState<Livro[]>([]);
   const [comentarios, setComentarios] = useState<{ [key: number]: Comentario[] }>({});
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
   const [newReview, setNewReview] = useState<string>("");
   const [selectedLivro, setSelectedLivro] = useState<string | null>(null);
   const [nota, setNota] = useState<number | null>(null);
@@ -211,6 +214,7 @@ export default function RegisterPage() {
       setNota(null);
       setLivros([]); // Limpar a lista de livros
       fetchReviews(); // Recarregar reviews após enviar
+      setSuccess("Review enviada com sucesso!");
     } catch (error) {
       if (axios.isAxiosError(error)) {
         console.log(error);
@@ -251,6 +255,7 @@ export default function RegisterPage() {
       setNewComentario("");
       fetchComentarios(review_id);
       console.log("Comentário enviado com sucesso.");
+      setSuccess("Comentário enviado com sucesso!");
     } catch (error) {
       if (axios.isAxiosError(error)) {
         console.log(error);
@@ -306,6 +311,7 @@ export default function RegisterPage() {
       });
   
       fetchReviews(); // Recarregar reviews após excluir
+      setSuccess("Review excluída com sucesso!");
     } catch (error) {
       if (axios.isAxiosError(error)) {
         console.log(error);
@@ -328,7 +334,6 @@ export default function RegisterPage() {
       }
   
       if (!editReviewId || !editReviewText || !editReviewNota) {
-        setError("Todos os campos são obrigatórios.");
         return;
       }
   
@@ -349,6 +354,7 @@ export default function RegisterPage() {
       setEditReviewText("");
       setEditReviewNota(null);
       fetchReviews(); // Recarregar reviews após atualizar
+      setSuccess("Review atualizada com sucesso!");
     } catch (error) {
       if (axios.isAxiosError(error)) {
         console.log(error);
@@ -359,28 +365,6 @@ export default function RegisterPage() {
       setError("Erro ao atualizar review.");
     }
   };
-
-  const handleEditIcon = (review: Review) => {
-    console.log("usuario_id:", review.usuario.usuario_id);
-    console.log("localStorage.usuario_id:", localStorage.getItem("usuario_id"));
-    const usuario_id = localStorage.getItem("usuario_id");
-    return usuario_id && usuario_id === review.usuario.usuario_id.toString();
-  };
-
-  const handleTrashIcon = (review: Review) => {
-    const usuario_id = localStorage.getItem("usuario_id");
-    if (!usuario_id) {
-      return false;
-    }
-    if (usuario_id === review.usuario.usuario_id.toString()) {
-      return true;
-    }
-    if (usuario && usuario.tipo === "admin") {
-      return true;
-    }
-    return usuario_id && usuario_id === review.usuario.usuario_id.toString();
-  };
-
   const [editComentarioId, setEditComentarioId] = useState<number | null>(null);
 
   const handleUpdateComentario = async () => {
@@ -393,7 +377,6 @@ export default function RegisterPage() {
       }
   
       if (!editComentarioId || !editComentarioText) {
-        setError("Todos os campos são obrigatórios.");
         return;
       }
       setComentarios((prev) => {
@@ -433,6 +416,7 @@ export default function RegisterPage() {
       if (comentario) {
         fetchComentarios(comentario[0].review.review_id);
       }
+      setSuccess("Comentário atualizado com sucesso!");
     } catch (error) {
       if (axios.isAxiosError(error)) {
         console.log(error);
@@ -444,61 +428,11 @@ export default function RegisterPage() {
     }
   };
 
-  const handleEditComentario = (comentario: Comentario) => {
-    setEditComentarioId(comentario.comentario_id);
-    setEditComentarioText(comentario.texto);
-    setIsEditComentarioModalOpen(true);
+  const currentUser = {
+    usuario_id: usuario?.usuario_id ?? 0,
+    isAdmin: usuario?.tipo === "admin",
   };
 
-  const handleDeleteComentario = async (comentario_id: number, review_id: number) => {
-    try {
-      const token = localStorage.getItem("token");
-  
-      if (!token) {
-        setError("Token não encontrado.");
-        return;
-      }
-  
-      await axios.delete(`http://localhost:3001/comentarios/${comentario_id}`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-  
-      // Remover o comentário do estado local
-      setComentarios((prev) => {
-        const updatedComentarios = { ...prev };
-        updatedComentarios[review_id] = updatedComentarios[review_id].filter(
-          (comentario) => comentario.comentario_id !== comentario_id
-        );
-        return updatedComentarios;
-      });
-    } catch (error) {
-      console.error("Erro ao excluir comentário:", error);
-      setError("Erro ao excluir comentário.");
-    }
-  };
-
-  const handleEditComentarioIcon = (comentario: Comentario) => {
-    console.log("usuario_id:", comentario.usuario.usuario_id);
-    console.log("localStorage.usuario_id:", localStorage.getItem("usuario_id"));
-    const usuario_id = localStorage.getItem("usuario_id");
-    return usuario_id && usuario_id === comentario.usuario.usuario_id.toString();
-  };
-
-  const handleTrashComentarioIcon = (comentario: Comentario) => {
-    const usuario_id = localStorage.getItem("usuario_id");
-    if (!usuario_id) {
-      return false;
-    }
-    if (usuario_id === comentario.usuario.usuario_id.toString()) {
-      return true;
-    }
-    if (usuario && usuario.tipo === "admin") {
-      return true;
-    }
-    return usuario_id && usuario_id === comentario.usuario.usuario_id.toString();
-  };
   const buttonColor = colorScheme === 'dark' ? 'white' : 'black';
   const buttonBgColor = colorScheme === 'dark' ? 'dark' : 'light';
 
@@ -510,16 +444,29 @@ export default function RegisterPage() {
       <NavbarNested />
       
       <DynamicContainer size={600} my={40}>
-        {error && <Text color="red">{error}</Text>}
+        {error && (
+          <Notification icon={<IconX size="1.1rem" />} color="red" onClose={() => setError(null)}>
+            {error}
+          </Notification>
+        )}
+        {success && (
+          <Notification icon={<IconCheck size="1.1rem" />} color="green" onClose={() => setSuccess(null)}>
+            {success}
+          </Notification>
+        )}
         <Box>
-          <Group align="flex-end">
-            <Textarea
-              value={newReview}
-              onChange={(event) => setNewReview(event.currentTarget.value)}
-              placeholder="Escreva sua review aqui..."
-              minRows={6}
-              style={{ flex: 1 }}
-            />
+        <Group flex="column" align="flex-start" style={{ width: '100%' }}>
+        <Text>Escreva sua review</Text>
+        <Textarea
+          value={newReview}
+          onChange={(event) => setNewReview(event.currentTarget.value)}
+          placeholder="Escreva sua review aqui..."
+          minRows={3}
+          style={{ width: '100%' }}
+        />
+        <Group style={{ width: '100%' }} grow>
+          <div style={{ flex: 1 }}>
+            <Text>Escolha um livro</Text>
             <Select
               data={livros.map((livro) => ({ value: livro.livro_key, label: livro.titulo }))}
               placeholder="Selecione um livro"
@@ -527,54 +474,41 @@ export default function RegisterPage() {
               onChange={setSelectedLivro}
               onSearchChange={handleSearchChange}
               searchable
-              style={{ flex: 1 }}
+              style={{ width: '100%' }}
             />
+          </div>
+          <div style={{ flex: 1 }}>
+            <Text>Avalie</Text>
             <NumberInput
               value={nota ?? undefined}
               onChange={(value) => setNota(value as number)}
               placeholder="Nota"
               min={0}
               max={5}
-              style={{ flex: 1 }}
+              style={{ width: '100%' }}
             />
-            <Button onClick={handleSubmit} variant="outline" color={buttonBgColor} style={{ color: buttonColor, border: 'none' }}>Enviar</Button>
-          </Group>
+          </div>
+        </Group>
+        <Group align="center" justify="center" style={{ width: '100%', marginTop: '10px' }}>
+          <Button onClick={handleSubmit} variant="outline" color={buttonBgColor} style={{ color: buttonColor, border: 'none' }}>Enviar</Button>
+        </Group>
+      </Group>
           <Stack mt="xl">
             {reviews.map((review) => (
               <Box key={review.review_id}>
-                <ReviewCard review={review} />
-                <Group>
-                  <Button onClick={() => toggleComentarios(review.review_id)} variant="outline" color={buttonBgColor} style={{ color: buttonColor, border: 'none' }}>
-                    <IconMessageCircle size={16} style={{ marginRight: 8 }} />
-                  </Button>
-                  {handleEditIcon(review) && (
-                    <Button onClick={() => handleEditReview(review)} variant="outline" color={buttonBgColor} style={{ color: buttonColor, border: 'none' }}>
-                      <IconEdit size={16} style={{ marginRight: 8 }} />
-                    </Button>
-                  )}
-                  {handleTrashIcon(review) && (
-                    <Button onClick={() => handleDeleteReview(review.review_id)} variant="outline" color={buttonBgColor} style={{ color: buttonColor, border: 'none' }}>
-                      <IconTrash size={16} style={{ marginRight: 8 }} />
-                    </Button>
-                  )}
-                </Group>
+                <ReviewCard
+                    key={review.review_id}
+                    review={review}
+                    onEdit={handleUpdateReview}
+                    onDelete={handleDeleteReview}
+                    fetchReviews={fetchReviews}
+                    currentUser={currentUser}
+                  />
                 {visibleComentarios[review.review_id] && (
   <>
             {(Array.isArray(comentarios[review.review_id]) ? comentarios[review.review_id] : []).map((comentario) => (
               <Box key={comentario.comentario_id}>
                 <ComentarioCard comentario={comentario} />
-                <Group>
-                {handleEditComentarioIcon(comentario) && (
-                  <Button onClick={() => handleEditComentario(comentario)} variant="outline" color={buttonBgColor} style={{ color: buttonColor, border: 'none' }}>
-                    <IconEdit size={16} style={{ marginRight: 8 }} />
-                  </Button>
-                )}
-                  {handleTrashComentarioIcon(comentario) && (
-                    <Button onClick={() => handleDeleteComentario(comentario.comentario_id, review.review_id)} variant="outline" color={buttonBgColor} style={{ color: buttonColor, border: 'none' }}>
-                      <IconTrash size={16} style={{ marginRight: 8 }} />
-                    </Button>
-                  )}
-                </Group>
               </Box>
             ))}
             <Textarea

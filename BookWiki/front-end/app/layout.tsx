@@ -11,6 +11,7 @@ import "./globals.css";
 import { breakpoints, colors } from "../styles/theme";
 import "react-toastify/dist/ReactToastify.css";
 import { ToastContainer } from "react-toastify";
+import { Notifications } from '@mantine/notifications';
 
 const geistSans = localFont({
   src: "../public/fonts/GeistVF.woff",
@@ -49,8 +50,10 @@ export default function RootLayout({
         <ColorSchemeScript />
         <MantineProvider theme={theme}>
           {children}
+          <Notifications/>
           <ToastContainer />
-        </MantineProvider>
+
+         </MantineProvider>
       </body>
     </html>
   );
