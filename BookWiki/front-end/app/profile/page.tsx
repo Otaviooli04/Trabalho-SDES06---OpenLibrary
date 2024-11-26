@@ -56,6 +56,7 @@ export default function ProfilePage() {
   const [editReviewText, setEditReviewText] = useState<string>("");
   const [editReviewNota, setEditReviewNota] = useState<number | null>(null);
   const router = useRouter();
+  const [success, setSuccess] = useState<string | null>(null);
   const theme = useMantineTheme();
   const { colorScheme } = useMantineColorScheme();
 
@@ -175,7 +176,6 @@ export default function ProfilePage() {
     try {
       const token = localStorage.getItem("token");
       const usuario_id = localStorage.getItem("usuario_id");
-      console.log("Enviando usuario_id:", usuario_id); // Adicione este console.log
       if (!token) {
         setError("Token não encontrado.");
         return;
@@ -203,6 +203,7 @@ export default function ProfilePage() {
       setEditReviewText("");
       setEditReviewNota(null);
       fetchReviews(); // Recarregar reviews após atualizar
+      setSuccess("Review atualizada com sucesso!");
     } catch (error) {
       if (axios.isAxiosError(error)) {
         console.log(error);
@@ -228,9 +229,6 @@ export default function ProfilePage() {
         return;
       }
   
-      console.log("Enviando usuario_id:", usuario_id); // Adicione este console.log
-      console.log("Enviando review_id:", review_id); // Adicione este console.log
-  
       await axios.delete(`http://localhost:3001/reviews/${review_id}`, {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -241,6 +239,7 @@ export default function ProfilePage() {
       });
   
       fetchReviews(); // Recarregar reviews após excluir
+      setSuccess("Review excluída com sucesso!");
     } catch (error) {
       if (axios.isAxiosError(error)) {
         console.log(error);
@@ -253,9 +252,6 @@ export default function ProfilePage() {
   };
 
   const handleEditIcon = (review: Review) => {
-    console.log("localStorage.usuario_id:", localStorage.getItem("usuario_id"));
-    console.log('id do usuario:', user?.usuario_id);
-    console.log("localStorage.usuario_id:", localStorage.getItem("usuario_id"));
     const usuario_id = localStorage.getItem("usuario_id");
     return usuario_id && usuario_id === user?.usuario_id.toString();
   };
@@ -272,7 +268,10 @@ export default function ProfilePage() {
   if (!user) {
     return <Loader />;
   }
-
+  const currentUser = {
+    usuario_id: user?.usuario_id ?? 0,
+    isAdmin: user?.tipo === "admin",
+  };
   const buttonColor = colorScheme === 'dark' ? 'white' : 'black';
   const buttonBgColor = colorScheme === 'dark' ? 'dark' : 'light';
 
@@ -339,19 +338,15 @@ export default function ProfilePage() {
           <div>
             {reviews.map((review, index) => (
               <Card key={index} shadow="sm" padding="lg" radius="md" withBorder>
-                <ReviewCard review={review} />
-                <Group>
-                  {handleEditIcon(review) && (
-                    <Button onClick={() => handleEditReview(review)} variant="outline" color={buttonBgColor} style={{ color: buttonColor, border: 'none' }}>
-                      <IconEdit size={16} style={{ marginRight: 8 }} />
-                    </Button>
-                  )}
-                  {handleTrashIcon(review) && (
-                    <Button onClick={() => handleDeleteReview(review.review_id)} variant="outline" color={buttonBgColor} style={{ color: buttonColor, border: 'none' }}>
-                      <IconTrash size={16} style={{ marginRight: 8 }} />
-                    </Button>
-                  )}
-                </Group>
+                <ReviewCard
+                    key={review.review_id}
+                    review={review}
+                    onEdit={handleEditReview}
+                    onDelete={handleDeleteReview}
+                    fetchReviews={fetchReviews}
+                    currentUser={currentUser}
+                    isUser={true}
+                  />
               </Card>
             ))}
           </div>
