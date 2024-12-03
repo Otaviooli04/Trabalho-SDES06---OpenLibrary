@@ -16,6 +16,19 @@
     font-style: normal;
   }
 
+  
+.table-cell {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 200px; /* Ajuste o valor conforme necessário */
+}
+
+/* Adicione este estilo ao seu arquivo CSS */
+.table-cell {
+  word-wrap: break-word;
+  max-width: 200px; /* Ajuste o valor conforme necessário */
+}
 body {
     font-family: 'MinhaFonte', sans-serif;
   }

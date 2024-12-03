@@ -50,7 +50,7 @@ export default function RootLayout({
         <ColorSchemeScript />
         <MantineProvider theme={theme}>
           {children}
-          <Notifications/>
+          <Notifications />
           <ToastContainer />
 
          </MantineProvider>

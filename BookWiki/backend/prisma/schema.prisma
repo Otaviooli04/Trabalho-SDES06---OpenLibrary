@@ -58,6 +58,7 @@ model livro {
   usuario            usuario?             @relation(fields: [usuario_id], references: [usuario_id], onDelete: NoAction, onUpdate: NoAction)
   livro_autor        livro_autor[]
   livro_categoria    livro_categoria[]
+  reading_goal       reading_goal[]
   review             review[]
 
   @@index([ano_publicacao], map: "livro_ano")
@@ -67,8 +68,8 @@ model livro {
 model livro_autor {
   livro_key String @db.VarChar(11)
   autor_key String @db.VarChar(11)
-  autor     autor  @relation(fields: [autor_key], references: [autor_key], onDelete: NoAction, onUpdate: NoAction)
-  livro     livro  @relation(fields: [livro_key], references: [livro_key], onDelete: NoAction, onUpdate: NoAction)
+  autor     autor  @relation(fields: [autor_key], references: [autor_key], onDelete: Cascade, onUpdate: NoAction)
+  livro     livro  @relation(fields: [livro_key], references: [livro_key], onDelete: Cascade, onUpdate: NoAction)
 
   @@id([livro_key, autor_key])
 }
@@ -77,7 +78,7 @@ model livro_categoria {
   livro_key    String    @db.VarChar(11)
   categoria_id Int
   categoria    categoria @relation(fields: [categoria_id], references: [categoria_id], onDelete: NoAction, onUpdate: NoAction)
-  livro        livro     @relation(fields: [livro_key], references: [livro_key], onDelete: NoAction, onUpdate: NoAction)
+  livro        livro     @relation(fields: [livro_key], references: [livro_key], onDelete: Cascade, onUpdate: NoAction)
 
   @@id([livro_key, categoria_id])
 }
@@ -104,6 +105,7 @@ model usuario {
   lista_livros lista_livros[]
   livro        livro[]
   perfil       perfil[]
+  reading_goal reading_goal[]
   review       review[]
 }
 
@@ -133,7 +135,7 @@ model review {
   nota         Int?
   data_criacao DateTime?    @default(now()) @db.Timestamp(6)
   comentario   comentario[]
-  livro        livro        @relation(fields: [livro_key], references: [livro_key], onDelete: NoAction, onUpdate: NoAction)
+  livro        livro        @relation(fields: [livro_key], references: [livro_key], onDelete: Cascade, onUpdate: NoAction)
   usuario      usuario      @relation(fields: [usuario_id], references: [usuario_id], onDelete: NoAction, onUpdate: NoAction)
 }
 
@@ -143,6 +145,15 @@ model comentario {
   data_criacao  DateTime @default(now()) @db.Timestamp(6)
   usuario_id    Int
   review_id     Int
-  review        review   @relation(fields: [review_id], references: [review_id], onDelete: NoAction, onUpdate: NoAction)
+  review        review   @relation(fields: [review_id], references: [review_id], onDelete: Cascade, onUpdate: NoAction)
   usuario       usuario  @relation(fields: [usuario_id], references: [usuario_id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model reading_goal {
+  goal_id    Int     @id @default(autoincrement())
+  usuario_id Int
+  livro_key  String  @db.VarChar(11)
+  meta       Int
+  livro      livro   @relation(fields: [livro_key], references: [livro_key], onDelete: Cascade, onUpdate: NoAction)
+  usuario    usuario @relation(fields: [usuario_id], references: [usuario_id], onDelete: Cascade, onUpdate: NoAction)
 }

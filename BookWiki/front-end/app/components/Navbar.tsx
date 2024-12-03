@@ -7,8 +7,9 @@ import classes from './NavbarNested.module.css';
 import Link from 'next/link';
 
 const mockdata = [
-  { label: 'Adicionar Review', icon: 'plus', href: '/add-review' },
-  { label: 'Buscar Livros', icon: 'search', href: '/searchBooks' },
+  { label: 'Buscar Livros', icon: 'search', href: '/livro' },
+  { label: 'Buscar Autores', icon: 'search', href: '/autor' },
+  { label: 'Buscar Editoras', icon: 'search', href: '/editora' },
 ];
 
 export default function NavbarNested() {

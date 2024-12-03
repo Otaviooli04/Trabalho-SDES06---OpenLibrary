@@ -5,24 +5,200 @@ const axios = require("axios");
 const router = express.Router();
 const prisma = new PrismaClient();
 
+//rota para buscar todos os livros
 router.get("/livros", async (req, res) => {
   try {
     const livros = await prisma.livro.findMany({
       select: {
         livro_key: true,
         titulo: true,
+        subtitulo: true,
+        ano_publicacao: true,
+        qtd_paginas: true,
+        qtd_avaliacoes: true,
+        capa_url: true,
+        editora: {
+          select: {
+            nome: true,
+          },
+        },
+        lingua: {
+          select: {
+            sigla: true,
+          },
+        },
+        livro_autor: {
+          select: {
+            autor: {
+              select: {
+                autor_key: true,
+                nome: true,
+                foto_url: true,
+              },
+            },
+          },
+        },
+        review: {
+          select: {
+            review_id: true,
+            data_criacao: true,
+            livro_key: true,
+            texto: true,
+            nota: true,
+            usuario: {
+              select: {
+                nome: true,
+                usuario_id: true,
+                perfil: {
+                  select: {
+                    foto_url: true,
+                  },
+                },
+              },
+            },
+          },
+        },
       },
     });
 
     res.json(livros);
-    ("Livros encontrados:", livros); // Log dos livros encontradosconsole.log
+    console.log("Livros encontrados:", livros); // Log dos livros encontrados
   } catch (error) {
     console.error("Erro ao buscar livros:", error); // Log do erro
-    console.log("Erro ao buscar livros.");
     res.status(500).json({ error: "Erro ao buscar livros." });
   }
 });
 
+// Rota para buscar um livro específico
+router.get("/livros/:livro_key", async (req, res) => {
+  const { livro_key } = req.params;
+  console.log('buscando unico livro');
+  console.log('livro_key', livro_key);
+  console.log('req.params', req.params);
+  try {
+    const livro = await prisma.livro.findUnique({
+      where: { livro_key },
+      select: {
+        livro_key: true,
+        titulo: true,
+        subtitulo: true,
+        ano_publicacao: true,
+        qtd_paginas: true,
+        qtd_avaliacoes: true,
+        capa_url: true,
+        editora: {
+          select: {
+            nome: true,
+          },
+        },
+        lingua: {
+          select: {
+            sigla: true,
+          },
+        },
+        livro_autor: {
+          select: {
+            autor: {
+              select: {
+                autor_key: true,
+                nome: true,
+                foto_url: true,
+              },
+            },
+          },
+        },
+        review: {
+          select: {
+            review_id: true,
+            data_criacao: true,
+            livro_key: true,
+            texto: true,
+            nota: true,
+            usuario: {
+              select: {
+                nome: true,
+                usuario_id: true,
+                tipo: true,
+                perfil: {
+                  select: {
+                    foto_url: true,
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!livro) {
+      return res.status(404).json({ error: "Livro não encontrado." });
+    }
+
+    res.json(livro);
+    console.log("Livro encontrado:", livro); // Log do livro encontrado
+  } catch (error) {
+    console.error("Erro ao buscar livro:", error); // Log do erro
+    res.status(500).json({ error: "Erro ao buscar livro." });
+  }
+});
+
+// Rota para atualizar um livro
+router.put("/livros/:livro_key", async (req, res) => {
+  console.log('Atualizando livro');
+  const { livro_key } = req.params;
+  const { titulo, subtitulo, capa_url } = req.body;
+
+  if (!titulo && !subtitulo && !capa_url) {
+    return res.status(400).json({ error: "Título, subtítulo ou URL da capa são obrigatórios." });
+  }
+
+  try {
+    // Verificar se o livro existe
+    const livroExistente = await prisma.livro.findUnique({ where: { livro_key } });
+    if (!livroExistente) {
+      return res.status(404).json({ error: "Livro não encontrado." });
+    }
+
+    // Atualizar o livro
+    const updatedLivro = await prisma.livro.update({
+      where: { livro_key },
+      data: {
+        titulo: titulo || livroExistente.titulo,
+        subtitulo: subtitulo || livroExistente.subtitulo,
+        capa_url: capa_url || livroExistente.capa_url,
+      },
+    });
+
+    console.log('updatedLivro', updatedLivro);
+    res.status(200).json(updatedLivro);
+    console.log("Livro atualizado:", updatedLivro); // Log do livro atualizado
+  } catch (error) {
+    console.error("Erro ao atualizar livro:", error); // Log do erro
+    res.status(500).json({ error: "Erro ao atualizar livro." });
+  }
+});
+
+router.delete("/livros/:livro_key", async (req, res) => {
+  const { livro_key } = req.params;
+
+  try {
+    // Verificar se o livro existe
+    const livroExistente = await prisma.livro.findUnique({ where: { livro_key } });
+    if (!livroExistente) {
+      return res.status(404).json({ error: "Livro não encontrado." });
+    }
+
+    // Excluir o livro
+    await prisma.livro.delete({ where: { livro_key } });
+
+    res.status(200).json({ message: "Livro excluído com sucesso." });
+    console.log("Livro excluído:", livro_key); // Log do livro excluído
+  } catch (error) {
+    console.error("Erro ao excluir livro:", error); // Log do erro
+    res.status(500).json({ error: "Erro ao excluir livro." });
+  }
+});
 
 // Rota para buscar a lista de livros na API do OpenLibrary
 router.get("/buscar-livros", async (req, res) => {
@@ -55,7 +231,7 @@ router.get("/buscar-livros", async (req, res) => {
     res.status(500).json({ error: "Erro ao buscar livros na API do OpenLibrary." });
   }
 });
-
+// Rota para adicionar um livro
 router.post("/livros/registro", async (req, res) => {
   console.log('Registrando livro');
   console.log('req.body', req.body);
@@ -161,7 +337,7 @@ router.post("/livros/registro", async (req, res) => {
     res.status(500).json({ error: "Erro ao criar livro." });
   }
 });
-
+// Rota para buscar a lista de autores na API do OpenLibrary
 router.get("/buscar-autores", async (req, res) => {
   console.log('Buscando autor');
   const { nomeAutor } = req.query;
