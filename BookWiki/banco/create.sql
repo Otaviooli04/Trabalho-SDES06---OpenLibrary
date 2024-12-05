@@ -240,3 +240,12 @@ CREATE TABLE comentario (
     FOREIGN KEY (usuario_id) REFERENCES "usuario"(usuario_id),
     FOREIGN KEY (review_id) REFERENCES "review"(review_id)
 );
+
+CREATE TABLE reading_goal (
+    goal_id SERIAL PRIMARY KEY,
+    usuario_id INT NOT NULL,
+    livro_key VARCHAR(11) NOT NULL,
+    meta INT NOT NULL,
+    FOREIGN KEY (usuario_id) REFERENCES usuario(usuario_id) ON DELETE CASCADE,
+    FOREIGN KEY (livro_key) REFERENCES livro(livro_key) ON DELETE CASCADE
+);

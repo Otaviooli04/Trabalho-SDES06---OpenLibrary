@@ -114,4 +114,102 @@ router.put("/users/:id", verifyToken, async (req, res) => {
   }
 });
 
+// Rota para alterar a senha do usuário
+router.put("/users/:id/senha", verifyToken, async (req, res) => {
+  const { id } = req.params;
+  const { senhaAtual, novaSenha } = req.body;
+
+  if (!senhaAtual || !novaSenha) {
+    return res.status(400).json({ error: "Senha atual e nova senha são obrigatórias." });
+  }
+
+  try {
+    // Verificar se o usuário existe
+    const usuario = await prisma.usuario.findUnique({ where: { usuario_id: parseInt(id) } });
+    if (!usuario) {
+      return res.status(404).json({ error: "Usuário não encontrado." });
+    }
+
+    // Verificar se a senha atual está correta
+    const senhaValida = await bcrypt.compare(senhaAtual, usuario.senha);
+    if (!senhaValida) {
+      return res.status(403).json({ error: "Senha atual incorreta." });
+    }
+
+    // Atualizar a senha
+    const hashedPassword = await bcrypt.hash(novaSenha, 10);
+    const updatedUser = await prisma.usuario.update({
+      where: { usuario_id: parseInt(id) },
+      data: { senha: hashedPassword },
+    });
+
+    res.status(200).json({ message: "Senha atualizada com sucesso." });
+    console.log("Senha atualizada:", updatedUser); // Log da senha atualizada
+  } catch (error) {
+    console.error("Erro ao atualizar senha:", error); // Log do erro
+    res.status(500).json({ error: "Erro ao atualizar senha." });
+  }
+});
+
+// Rota para alterar o nome do usuário
+router.put("/users/:id/nome", verifyToken, async (req, res) => {
+  const { id } = req.params;
+  const { nome } = req.body;
+
+  if (!nome) {
+    return res.status(400).json({ error: "Nome é obrigatório." });
+  }
+
+  try {
+    // Verificar se o usuário existe
+    const usuario = await prisma.usuario.findUnique({ where: { usuario_id: parseInt(id) } });
+    if (!usuario) {
+      return res.status(404).json({ error: "Usuário não encontrado." });
+    }
+
+    // Atualizar o nome
+    const updatedUser = await prisma.usuario.update({
+      where: { usuario_id: parseInt(id) },
+      data: { nome },
+    });
+
+    res.status(200).json(updatedUser);
+    console.log("Nome atualizado:", updatedUser); // Log do nome atualizado
+  } catch (error) {
+    console.error("Erro ao atualizar nome:", error); // Log do erro
+    res.status(500).json({ error: "Erro ao atualizar nome." });
+  }
+});
+
+// Rota para alterar o email do usuário
+router.put("/users/:id/email", verifyToken, async (req, res) => {
+  const { id } = req.params;
+  const { email } = req.body;
+
+  if (!email) {
+    return res.status(400).json({ error: "Email é obrigatório." });
+  }
+
+  try {
+    // Verificar se o usuário existe
+    const usuario = await prisma.usuario.findUnique({ where: { usuario_id: parseInt(id) } });
+    if (!usuario) {
+      return res.status(404).json({ error: "Usuário não encontrado." });
+    }
+
+    // Atualizar o email
+    const updatedUser = await prisma.usuario.update({
+      where: { usuario_id: parseInt(id) },
+      data: { email },
+    });
+
+    res.status(200).json(updatedUser);
+    console.log("Email atualizado:", updatedUser); // Log do email atualizado
+  } catch (error) {
+    console.error("Erro ao atualizar email:", error); // Log do erro
+    res.status(500).json({ error: "Erro ao atualizar email." });
+  }
+});
+
+
 module.exports = router;

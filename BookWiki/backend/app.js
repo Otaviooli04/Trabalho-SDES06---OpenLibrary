@@ -25,6 +25,9 @@ const profileRoute = require("./routes/profile");
 const reviewsRoute = require("./routes/reviews");
 const booksRoute = require("./routes/books");
 const usersRoute = require("./routes/user");
+const autorRoute = require("./routes/autor");
+const editoraRoute = require("./routes/editora");
+const readingGoalsRouter = require("./routes/readingGoals");
 
 
 
@@ -34,6 +37,9 @@ app.use(profileRoute);
 app.use(reviewsRoute);
 app.use(booksRoute);
 app.use(usersRoute);
+app.use(autorRoute);
+app.use(editoraRoute);
+app.use(readingGoalsRouter);
 
 
 

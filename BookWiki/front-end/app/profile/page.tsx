@@ -3,9 +3,9 @@ import { useState, useEffect } from "react";
 import { ReviewCard } from '../components/ReviewCard';
 import axios from "axios";
 import { useRouter } from 'next/navigation';
-import { Container, Group, Avatar, Text, Button, Textarea, Card, Title, List, Loader, FileInput, Modal, NumberInput, useMantineTheme, useMantineColorScheme, Stack } from '@mantine/core';
+import { Container, Group, Avatar, Text, Button, Textarea, Card, Title, List, Loader, FileInput, Modal, NumberInput, TextInput, PasswordInput, useMantineTheme, useMantineColorScheme, Stack, ActionIcon, Select } from '@mantine/core';
 import { ColorSchemesSwitcher } from "../components/color-schemes-switcher";
-import { IconEdit, IconArrowLeft, IconTrash } from '@tabler/icons-react';
+import { IconEdit, IconArrowLeft, IconTrash, IconSettings, IconBook } from '@tabler/icons-react';
 
 interface User {
   usuario_id: number;
@@ -18,7 +18,15 @@ interface User {
     perfil_id: number;
   }[];
 }
-
+interface ReadingGoal {
+  goal_id: number;
+  livro_key: string;
+  meta: number;
+  livro: {
+    titulo: string;
+    capa_url: string;
+  };
+}
 interface Lista {
   lista_id: number;
   nome_lista: string;
@@ -55,10 +63,45 @@ export default function ProfilePage() {
   const [editReviewId, setEditReviewId] = useState<number | null>(null);
   const [editReviewText, setEditReviewText] = useState<string>("");
   const [editReviewNota, setEditReviewNota] = useState<number | null>(null);
+  const [isAccountModalOpen, setIsAccountModalOpen] = useState(false);
+  const [newName, setNewName] = useState<string>("");
+  const [newEmail, setNewEmail] = useState<string>("");
+  const [newPassword, setNewPassword] = useState<string>("");
   const router = useRouter();
+  const [currentPassword, setCurrentPassword] = useState<string>("");
   const [success, setSuccess] = useState<string | null>(null);
   const theme = useMantineTheme();
   const { colorScheme } = useMantineColorScheme();
+  const [isGoalModalOpen, setIsGoalModalOpen] = useState(false);
+  const [selectedBook, setSelectedBook] = useState<string>("");
+  const [readingGoal, setReadingGoal] = useState<number | null>(null);
+  const [livros, setLivros] = useState<{ livro_key: string; titulo: string }[]>([]);
+  const [readingGoals, setReadingGoals] = useState<ReadingGoal[]>([]);
+  const [isEditGoalModalOpen, setIsEditGoalModalOpen] = useState(false);
+  const [editGoalId, setEditGoalId] = useState<number | null>(null);
+  
+
+  const handleEditGoal = (goal: ReadingGoal) => {
+    setSelectedBook(goal.livro_key);
+    setReadingGoal(goal.meta);
+    setEditGoalId(goal.goal_id);
+    setIsEditGoalModalOpen(true);
+  };
+  
+
+  useEffect(() => {
+    if (isGoalModalOpen) {
+      fetchLivros();
+    }
+  }, [isGoalModalOpen]);
+
+  useEffect(() => {
+    if (isEditGoalModalOpen) {
+      fetchLivros();
+    }
+  }, [isEditGoalModalOpen]);
+
+  
 
   const fetchUser = async () => {
     try {
@@ -76,8 +119,56 @@ export default function ProfilePage() {
 
       setUser(response.data);
       setNewBio(response.data.perfil[0].bio);
+      setNewName(response.data.nome);
+      setNewEmail(response.data.email);
     } catch (error) {
       setError("Erro ao buscar informações do usuário.");
+    }
+  };
+
+  
+
+  const fetchLivros = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        setError("Token não encontrado.");
+        return;
+      }
+  
+      const response = await axios.get("http://localhost:3001/livros", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+  
+      setLivros(response.data);
+    } catch (error) {
+      setError("Erro ao buscar livros.");
+    }
+  };
+
+  const fetchReadingGoals = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        setError("Token não encontrado.");
+        return;
+      }
+  
+      const response = await axios.get("http://localhost:3001/reading-goals", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+  
+      if (response.data && response.data.length > 0) {
+        setReadingGoals(response.data);
+      } else {
+        setReadingGoals([]);
+      }
+    } catch (error) {
+      setError("Erro ao buscar metas de leitura.");
     }
   };
 
@@ -125,7 +216,64 @@ export default function ProfilePage() {
     fetchUser();
     fetchListas();
     fetchReviews();
+    fetchReadingGoals();
   }, []);
+
+  const handleUpdateGoal = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        setError("Token não encontrado.");
+        return;
+      }
+  
+      if (!selectedBook || !readingGoal) {
+        setError("Todos os campos são obrigatórios.");
+        return;
+      }
+  
+      const goalData = {
+        livro_key: selectedBook,
+        meta: readingGoal,
+      };
+  
+      await axios.put(`http://localhost:3001/reading-goals/${editGoalId}`, goalData, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+  
+      setIsEditGoalModalOpen(false);
+      setSelectedBook("");
+      setReadingGoal(null);
+      setEditGoalId(null);
+      fetchReadingGoals(); // Recarregar metas de leitura após atualizar
+      setSuccess("Meta de leitura atualizada com sucesso!");
+    } catch (error) {
+      setError("Erro ao atualizar meta de leitura.");
+    }
+  };
+  
+  const handleDeleteGoal = async (goal_id: number) => {
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        setError("Token não encontrado.");
+        return;
+      }
+  
+      await axios.delete(`http://localhost:3001/reading-goals/${goal_id}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+  
+      fetchReadingGoals(); // Recarregar metas de leitura após excluir
+      setSuccess("Meta de leitura removida com sucesso!");
+    } catch (error) {
+      setError("Erro ao remover meta de leitura.");
+    }
+  };
 
   const handleBioSave = async () => {
     try {
@@ -251,15 +399,95 @@ export default function ProfilePage() {
     }
   };
 
-  const handleEditIcon = (review: Review) => {
-    const usuario_id = localStorage.getItem("usuario_id");
-    return usuario_id && usuario_id === user?.usuario_id.toString();
+  const handleAccountSave = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      const usuario_id = localStorage.getItem("usuario_id");
+      if (!token) {
+        setError("Token não encontrado.");
+        return;
+      }
+  
+      if (!usuario_id) {
+        setError("Usuário não encontrado.");
+        return;
+      }
+  
+      // Atualizar nome
+      if (newName && newName !== user?.nome) {
+        await axios.put(`http://localhost:3001/users/${usuario_id}/nome`, { nome: newName }, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+      }
+  
+      // Atualizar email
+      if (newEmail && newEmail !== user?.email) {
+        await axios.put(`http://localhost:3001/users/${usuario_id}/email`, { email: newEmail }, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+      }
+  
+      // Atualizar senha
+      if (newPassword) {
+        const senhaAtual = prompt("Digite sua senha atual:");
+        if (!senhaAtual) {
+          setError("Senha atual é obrigatória para alterar a senha.");
+          return;
+        }
+  
+        await axios.put(`http://localhost:3001/users/${usuario_id}/senha`, { senhaAtual, novaSenha: newPassword }, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+      }
+  
+      // Recarregar informações do usuário
+      await fetchUser();
+      setIsAccountModalOpen(false);
+      setSuccess("Informações da conta atualizadas com sucesso!");
+    } catch (error) {
+      setError("Erro ao atualizar informações da conta.");
+    }
   };
 
-  const handleTrashIcon = (review: Review) => {
-    const usuario_id = localStorage.getItem("usuario_id");
-    return usuario_id && (usuario_id === user?.usuario_id.toString() || user?.tipo === 'admin');
+  const handleSaveReadingGoal = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        setError("Token não encontrado.");
+        return;
+      }
+  
+      if (!selectedBook || !readingGoal) {
+        setError("Todos os campos são obrigatórios.");
+        return;
+      }
+  
+      const goalData = {
+        livro: selectedBook,
+        meta: readingGoal,
+      };
+  
+      await axios.post("http://localhost:3001/reading-goals", goalData, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+  
+      setIsGoalModalOpen(false);
+      setSelectedBook("");
+      setReadingGoal(null);
+      setSuccess("Meta de leitura definida com sucesso!");
+    } catch (error) {
+      setError("Erro ao definir meta de leitura.");
+    }
   };
+
 
   if (error) {
     return <Text color="red">{error}</Text>;
@@ -279,6 +507,9 @@ export default function ProfilePage() {
     <Container mt="xl">
       <Group justify="right" className="h-full py-2 px-2">
         <ColorSchemesSwitcher />
+        <ActionIcon onClick={() => setIsAccountModalOpen(true)} color={buttonBgColor} style={{ color: buttonColor }}>
+          <IconSettings size={16} />
+        </ActionIcon>
       </Group>
       <Button variant="outline" onClick={() => router.push('/menu')} mb="md" color={buttonBgColor} style={{ color: buttonColor }}>
         <IconArrowLeft size={16} style={{ marginRight: 8 }} />
@@ -294,9 +525,13 @@ export default function ProfilePage() {
             </div>
           </Group>
           <Button onClick={() => setIsEditingBio(!isEditingBio)} color={buttonBgColor} style={{ color: buttonColor }}>
-            <IconEdit size={14} style={{ marginRight: 8 }} />
-            Editar Perfil
-          </Button>
+          <IconEdit size={14} style={{ marginRight: 8 }} />
+          Editar Perfil
+        </Button>
+        <Button onClick={() => setIsGoalModalOpen(true)} color={buttonBgColor} style={{ color: buttonColor }}>
+          <IconBook size={14} style={{ marginRight: 8 }} />
+          Definir Meta de Leitura
+        </Button>
         </Group>
 
         <Title order={3} mb="sm">Bio</Title>
@@ -322,17 +557,35 @@ export default function ProfilePage() {
           <Text>{user.perfil[0].bio}</Text>
         )}
 
-        <Title order={3} mt="lg" mb="sm">Listas de Livros</Title>
-        {listas.length > 0 ? (
-          <List>
-            {listas.map((lista, index) => (
-              <List.Item key={index}>{lista.nome_lista}</List.Item>
+        <Title order={3} mt="lg" mb="sm">Metas de Leitura</Title>
+        {readingGoals.length > 0 ? (
+          <Group justify="center">
+            {readingGoals.map((goal, index) => (
+              <Card key={index} shadow="sm" padding="lg" radius="md" withBorder style={{ width: 200 }}>
+                <Card.Section>
+                  <img
+                    src={goal.livro.capa_url}
+                    alt={goal.livro.titulo}
+                    style={{ cursor: 'pointer', width: '100%', height: 'auto' }}
+                    onClick={() => router.push(`/livroInfo/${goal.livro_key}`)}
+                  />
+                </Card.Section>
+                <Text fw={500} mt="md">{goal.livro.titulo}</Text>
+                <Text size="sm" color="dimmed">{goal.meta} páginas por dia</Text>
+                <Group mt="md">
+                  <Button onClick={() => handleEditGoal(goal)} color={buttonBgColor} style={{ color: buttonColor }}>
+                    <IconEdit size={14} />
+                  </Button>
+                  <Button onClick={() => handleDeleteGoal(goal.goal_id)} color="red">
+                    <IconTrash size={14} />
+                  </Button>
+                </Group>
+              </Card>
             ))}
-          </List>
+          </Group>
         ) : (
-          <Text color="dimmed">Nenhuma lista de livros encontrada.</Text>
+          <Text color="dimmed">Nenhuma meta de leitura encontrada.</Text>
         )}
-
         <Title order={3} mt="lg" mb="sm">Reviews</Title>
         {reviews.length > 0 ? (
           <div>
@@ -373,6 +626,68 @@ export default function ProfilePage() {
           <Button onClick={handleUpdateReview} variant="outline" color={buttonBgColor} style={{ color: buttonColor, border: 'none' }}>Salvar</Button>
         </Stack>
       </Modal>
+          <Modal opened={isEditGoalModalOpen} onClose={() => setIsEditGoalModalOpen(false)} title="Editar Meta de Leitura">
+      <Stack>
+        <NumberInput
+          label="Meta de Leitura (páginas por dia)"
+          value={readingGoal ?? undefined}
+          onChange={(value) => setReadingGoal(value as number)}
+          placeholder="Digite a meta de leitura"
+          min={1}
+        />
+        <Button onClick={handleUpdateGoal} variant="outline" color={buttonBgColor} style={{ color: buttonColor, border: 'none' }}>Salvar</Button>
+      </Stack>
+    </Modal>
+
+      <Modal opened={isGoalModalOpen} onClose={() => setIsGoalModalOpen(false)} title="Definir Meta de Leitura">
+      <Stack>
+        <Select
+          label="Livro"
+          placeholder="Selecione um livro"
+          data={livros.map((livro) => ({ value: livro.livro_key, label: livro.titulo }))}
+          value={selectedBook}
+          onChange={(value) => setSelectedBook(value ?? "")}
+        />
+        <NumberInput
+          label="Meta de Leitura (páginas por dia)"
+          value={readingGoal ?? undefined}
+          onChange={(value) => setReadingGoal(value as number)}
+          placeholder="Digite a meta de leitura"
+          min={1}
+        />
+        <Button onClick={handleSaveReadingGoal} variant="outline" color={buttonBgColor} style={{ color: buttonColor, border: 'none' }}>Salvar</Button>
+      </Stack>
+    </Modal>
+
+      <Modal opened={isAccountModalOpen} onClose={() => setIsAccountModalOpen(false)} title="Gerenciar Conta">
+  <Stack>
+    <TextInput
+      label="Nome"
+      value={newName}
+      onChange={(event) => setNewName(event.currentTarget.value)}
+      placeholder="Digite seu nome"
+    />
+    <TextInput
+      label="Email"
+      value={newEmail}
+      onChange={(event) => setNewEmail(event.currentTarget.value)}
+      placeholder="Digite seu email"
+    />
+    <PasswordInput
+      label="Senha Atual"
+      value={currentPassword}
+      onChange={(event) => setCurrentPassword(event.currentTarget.value)}
+      placeholder="Digite sua senha atual"
+    />
+    <PasswordInput
+      label="Nova Senha"
+      value={newPassword}
+      onChange={(event) => setNewPassword(event.currentTarget.value)}
+      placeholder="Digite sua nova senha"
+    />
+    <Button onClick={handleAccountSave} variant="outline" color={buttonBgColor} style={{ color: buttonColor, border: '0' }}>Salvar</Button>
+  </Stack>
+</Modal>
     </Container>
   );
 }
